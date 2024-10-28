@@ -1,11 +1,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <syslog.h>
+#include "common.h"
 
 typedef enum {
     ERROR_NONE = 0,
@@ -18,17 +14,9 @@ typedef enum {
     ERROR_SYNC = 7
 } ErrorCode;
 
-static inline void log_error(ErrorCode code, const char* message) {
-    syslog(LOG_ERR, "Error [%d]: %s - %s", code, message, strerror(errno));
-    fprintf(stderr, "Error [%d]: %s - %s\n", code, message, strerror(errno));
-}
+void log_error(ErrorCode code, const char* message);
 
-#define RETURN_ON_ERROR(condition, code, message) \
-    do { \
-        if (condition) { \
-            log_error(code, message); \
-            return code; \
-        } \
-    } while(0)
+// Use log_message from monitor.h
+#include "monitor.h"
 
-#endif
+#endif // ERROR_H

@@ -1,12 +1,12 @@
 #ifndef CHECKSUM_H
 #define CHECKSUM_H
 
-#include <openssl/sha.h>
-#include <dirent.h>
+#include <windows.h>
+#include <openssl/evp.h>
 #include <sys/stat.h>
 #include "error.h"
 
-#define HASH_SIZE SHA256_DIGEST_LENGTH
+#define HASH_SIZE 32  // SHA256 hash size
 #define MAX_FILES 1000
 
 typedef struct {
@@ -26,61 +26,92 @@ static inline void calculate_file_hash(const char* path, unsigned char* hash) {
     FILE* file = fopen(path, "rb");
     if (!file) return;
 
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+    const EVP_MD* sha256 = EVP_sha256();
+    unsigned int hash_len;
+
+    EVP_DigestInit_ex(ctx, sha256, NULL);
 
     unsigned char buffer[4096];
     size_t bytes;
 
     while ((bytes = fread(buffer, 1, sizeof(buffer), file)) > 0) {
-        SHA256_Update(&sha256, buffer, bytes);
+        EVP_DigestUpdate(ctx, buffer, bytes);
     }
 
-    SHA256_Final(hash, &sha256);
+    EVP_DigestFinal_ex(ctx, hash, &hash_len);
+    EVP_MD_CTX_free(ctx);
     fclose(file);
 }
 
 static inline void scan_directory(const char* base_path, const char* rel_path, 
                                 FileList* list, size_t base_len) {
     char full_path[MAX_PATH];
-    struct dirent* entry;
-    struct stat statbuf;
-    DIR* dir;
+    WIN32_FIND_DATA find_data;
+    HANDLE find_handle;
+    char search_path[MAX_PATH];
 
-    snprintf(full_path, sizeof(full_path), "%s/%s", base_path, rel_path);
-    dir = opendir(full_path);
-    if (!dir) return;
+    // Construct the full path for searching
+    snprintf(full_path, sizeof(full_path), "%s\\%s", base_path, rel_path);
+    snprintf(search_path, sizeof(search_path), "%s\\*", full_path);
 
-    while ((entry = readdir(dir)) != NULL && list->count < MAX_FILES) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) 
+    // Start finding files
+    find_handle = FindFirstFile(search_path, &find_data);
+    if (find_handle == INVALID_HANDLE_VALUE) return;
+
+    do {
+        // Skip "." and ".." directories
+        if (strcmp(find_data.cFileName, ".") == 0 || 
+            strcmp(find_data.cFileName, "..") == 0) {
             continue;
+        }
 
-        char file_path[MAX_PATH];
-        char rel_file_path[MAX_PATH];
+        // Construct relative and full paths for the current file
+        char current_rel_path[MAX_PATH];
+        char current_full_path[MAX_PATH];
         
-        snprintf(file_path, sizeof(file_path), "%s/%s", full_path, entry->d_name);
-        snprintf(rel_file_path, sizeof(rel_file_path), "%s/%s", 
-                rel_path[0] == '\0' ? "" : rel_path, entry->d_name);
+        if (strlen(rel_path) == 0) {
+            snprintf(current_rel_path, sizeof(current_rel_path), "%s", 
+                    find_data.cFileName);
+        } else {
+            snprintf(current_rel_path, sizeof(current_rel_path), "%s\\%s", 
+                    rel_path, find_data.cFileName);
+        }
+        
+        snprintf(current_full_path, sizeof(current_full_path), "%s\\%s", 
+                base_path, current_rel_path);
 
-        if (stat(file_path, &statbuf) == 0) {
-            FileMetadata* meta = &list->files[list->count];
-            strncpy(meta->path, rel_file_path, sizeof(meta->path) - 1);
-            meta->modified_time = statbuf.st_mtime;
-            meta->size = statbuf.st_size;
-            meta->is_directory = S_ISDIR(statbuf.st_mode);
+        if (list->count >= MAX_FILES) break;
 
-            if (meta->is_directory) {
-                meta->hash[0] = 0;
-                scan_directory(base_path, rel_file_path, list, base_len);
-            } else {
-                calculate_file_hash(file_path, meta->hash);
-            }
+        FileMetadata* meta = &list->files[list->count];
+        strncpy(meta->path, current_rel_path, sizeof(meta->path) - 1);
+        meta->path[sizeof(meta->path) - 1] = '\0';
+
+        meta->is_directory = (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        
+        if (meta->is_directory) {
+            meta->hash[0] = 0;
+            meta->size = 0;
+            meta->modified_time = 0;
+            list->count++;
             
+            // Recursively scan subdirectories
+            scan_directory(base_path, current_rel_path, list, base_len);
+        } else {
+            meta->size = (find_data.nFileSizeHigh * (MAXDWORD + 1)) + 
+                        find_data.nFileSizeLow;
+            
+            ULARGE_INTEGER ull;
+            ull.LowPart = find_data.ftLastWriteTime.dwLowDateTime;
+            ull.HighPart = find_data.ftLastWriteTime.dwHighDateTime;
+            meta->modified_time = (ull.QuadPart - 116444736000000000ULL) / 10000000ULL;
+            
+            calculate_file_hash(current_full_path, meta->hash);
             list->count++;
         }
-    }
+    } while (FindNextFile(find_handle, &find_data));
 
-    closedir(dir);
+    FindClose(find_handle);
 }
 
 static inline FileList* get_file_list(const char* path) {
