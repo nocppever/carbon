@@ -1,5 +1,7 @@
 #include "ssl.h"
 #include "error.h"
+#include "common.h"
+
 
 SSL_CTX* create_ssl_context(int is_server) {
     const SSL_METHOD* method;
@@ -22,6 +24,7 @@ SSL_CTX* create_ssl_context(int is_server) {
 }
 
 ErrorCode configure_ssl_context(SSL_CTX* ssl_ctx, const char* cert_file, const char* key_file) {
+
     // Load the server's certificate and key
     if (SSL_CTX_use_certificate_file(ssl_ctx, cert_file, SSL_FILETYPE_PEM) <= 0) {
         log_error(ERROR_SSL, "Failed to load certificate");

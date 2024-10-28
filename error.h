@@ -1,7 +1,6 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#include "common.h"
 
 typedef enum {
     ERROR_NONE = 0,
@@ -13,7 +12,6 @@ typedef enum {
     ERROR_MEMORY = 6,
     ERROR_SYNC = 7
 } ErrorCode;
-
 void log_error(ErrorCode code, const char* message);
 
 // Use log_message from monitor.h

@@ -10,6 +10,7 @@
 SSL_CTX* create_ssl_context(int is_server);
 ErrorCode configure_ssl_context(SSL_CTX* ssl_ctx, const char* cert_file, const char* key_file);
 
+
 static inline ErrorCode init_openssl(void) {
     SSL_load_error_strings();
     OpenSSL_add_ssl_algorithms();

@@ -4,7 +4,12 @@
 
 ErrorCode check_system_requirements(SystemCheck* sys_check) {
     // Get system information
-    *sys_check = get_system_info();
+    SystemInfo sys_info = get_system_info();
+    sys_check->is_admin = sys_info.is_admin;
+    sys_check->firewall_enabled = sys_info.firewall_enabled;
+    sys_check->port_blocked = sys_info.port_blocked;
+    strcpy(sys_check->username, sys_info.username);
+    strcpy(sys_check->computer_name, sys_info.computer_name);
     log_message("System check - Username: %s, Computer: %s, Admin: %s",
                 sys_check->username,
                 sys_check->computer_name,

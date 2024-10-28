@@ -2,6 +2,7 @@
 #include "monitor.h"
 #include <stdarg.h>
 #include <time.h>
+#include "common.h"
 static char log_file[MAX_PATH];
 static HANDLE log_mutex = NULL;
 

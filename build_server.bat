@@ -17,7 +17,6 @@ set CFLAGS=-DWIN32_LEAN_AND_MEAN -D_WIN32_WINNT=0x0601 -Wall -O2
 set INCLUDES=-I. -I"%MINGW64_PATH%\include"
 set LIBS=-L"%MINGW64_PATH%\lib"
 
-:: Export log_message in monitor.h and mark it external in error.h
 echo Fixing header files...
 
 echo Creating monitor.h...
@@ -89,9 +88,15 @@ if errorlevel 1 goto error
 gcc %CFLAGS% %INCLUDES% -c server.c -o build\server.o
 if errorlevel 1 goto error
 
+gcc %CFLAGS% %INCLUDES% -c server_init.c -o build\server_init.o
+if errorlevel 1 goto error
+
+gcc %CFLAGS% %INCLUDES% -c firewall_defs.c -o build\firewall_defs.o
+if errorlevel 1 goto error
+
 echo Linking...
 gcc -o build\server.exe build\*.o ^
-    %LIBS% -lws2_32 -lssl -lcrypto -liphlpapi -lpsapi -lole32 -loleaut32 -luserenv
+   %LIBS% -lws2_32 -lssl -lcrypto -liphlpapi -lpsapi -lole32 -loleaut32 -luserenv
 if errorlevel 1 goto error
 
 echo Build successful!

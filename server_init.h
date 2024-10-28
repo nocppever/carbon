@@ -7,18 +7,11 @@
 #include <time.h>
 #include "common.h"
 
-typedef struct {
-    // Define ServerContext structure
-} ServerContext;
-
-// Remove or comment out the unused variable
-// static ServerContext g_server_context = {0};
 
 // Initialize logging
 void init_logging(void);
 
 // Check system requirements
-ErrorCode check_system_requirements(SystemCheck* sys_check);
 
 // Configure the system
 static inline ErrorCode configure_system(Config* config) {

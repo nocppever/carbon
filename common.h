@@ -29,7 +29,8 @@
 // Forward declarations for OpenSSL
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
-typedef enum ErrorCode;
+
+
 // Common definitions
 #define MAX_PATH 260
 #define MAX_COMPUTERS 10
@@ -52,8 +53,8 @@ typedef struct {
 } SystemCheck;
 
 // Function declarations for server.c
-enum ErrorCode check_system_requirements(SystemCheck* sys_check);
-enum ErrorCode configure_ssl_context(SSL_CTX* ssl_ctx, const char* cert_file, const char* key_file);
+ErrorCode check_system_requirements(SystemCheck* sys_check);
+ErrorCode configure_ssl_context(SSL_CTX* ssl_ctx, const char* cert_file, const char* key_file);
 void handle_client(ClientData* data);
 void start_server(void);
 void accept_connections(SOCKET server_socket, SSL_CTX* ssl_ctx);
